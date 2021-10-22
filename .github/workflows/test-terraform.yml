@@ -1,0 +1,20 @@
+name: workflow-test
+
+# Allows you to run this workflow manually from the Actions tab
+on: workflow_dispatch
+
+# Ensure we only have one instance of this workflow running at a time
+concurrency: ${{ github.ref }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a single command using the runners shell
+      - name: Run a one-line script
+        run: echo Hello, world!
