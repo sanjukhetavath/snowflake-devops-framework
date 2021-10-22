@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
 
+    # These environment variables are used by the Terraform azurerm backend
     env:
       ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
@@ -41,9 +42,15 @@ jobs:
 
       - name: Debug
         working-directory: ./terraform
-        run: ls
+        run: ls -al
 
       - name: Terraform Plan
         id: tf-plan
         working-directory: ./terraform
         run: terraform plan -no-color
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_REGION: ${{ secrets.SNOWFLAKE_REGION }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+          SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
