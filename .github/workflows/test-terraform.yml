@@ -11,6 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
 
+    env:
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
@@ -28,10 +34,6 @@ jobs:
           -backend-config="container_name=$TF_STATE_AZURERM_STORAGE_CONTAINER_NAME" \
           -backend-config="key=$TF_STATE_AZURERM_KEY_NAME"
         env:
-          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
           TF_STATE_AZURERM_RESOURCE_GROUP_NAME: ${{ secrets.TF_STATE_AZURERM_RESOURCE_GROUP_NAME }}
           TF_STATE_AZURERM_STORAGE_ACCOUNT_NAME: ${{ secrets.TF_STATE_AZURERM_STORAGE_ACCOUNT_NAME }}
           TF_STATE_AZURERM_STORAGE_CONTAINER_NAME: ${{ secrets.TF_STATE_AZURERM_STORAGE_CONTAINER_NAME }}
@@ -39,14 +41,9 @@ jobs:
 
       - name: Debug
         working-directory: ./terraform
-        run: cat terraform.tfstate
+        run: ls
 
       - name: Terraform Plan
         id: tf-plan
         working-directory: ./terraform
         run: terraform plan -no-color
-        env:
-          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
