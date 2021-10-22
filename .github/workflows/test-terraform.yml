@@ -39,6 +39,7 @@ jobs:
 
       - name: Terraform Plan
         id: tf-plan
+        working-directory: ./terraform
         run: terraform plan -no-color
         env:
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
