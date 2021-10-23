@@ -42,12 +42,19 @@ jobs:
 
       - name: Debug
         working-directory: ./terraform
-        run: ls -al
+        run: |
+          ls -al
+          ls -al .terraform
 
       - name: Terraform Plan
         id: tf-plan
         working-directory: ./terraform
         run: terraform plan -no-color
+
+      - name: Terraform Apply
+        id: tf-apply
+        working-directory: ./terraform
+        run: terraform apply
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_REGION: ${{ secrets.SNOWFLAKE_REGION }}
