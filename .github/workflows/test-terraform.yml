@@ -40,12 +40,6 @@ jobs:
           TF_STATE_AZURERM_STORAGE_CONTAINER_NAME: ${{ secrets.TF_STATE_AZURERM_STORAGE_CONTAINER_NAME }}
           TF_STATE_AZURERM_KEY_NAME: ${{ secrets.TF_STATE_AZURERM_KEY_NAME }}
 
-      - name: Debug
-        working-directory: ./terraform
-        run: |
-          ls -al
-          ls -al .terraform
-
       - name: Terraform Plan
         id: tf-plan
         working-directory: ./terraform
