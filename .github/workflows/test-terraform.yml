@@ -60,7 +60,7 @@ jobs:
       - name: Terraform Apply
         id: tf-apply
         working-directory: ./terraform
-        run: terraform apply
+        run: terraform apply -auto-approve
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_REGION: ${{ secrets.SNOWFLAKE_REGION }}
