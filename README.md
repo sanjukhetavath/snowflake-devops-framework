@@ -100,6 +100,7 @@ USE ROLE ACCOUNTADMIN;
 
 CREATE ROLE SDF_TERRAFORM_ROLE;
 GRANT CREATE ROLE ON ACCOUNT TO ROLE SDF_TERRAFORM_ROLE;
+GRANT MANAGE GRANTS ON ACCOUNT TO ROLE SDF_TERRAFORM_ROLE;
 GRANT CREATE INTEGRATION ON ACCOUNT TO ROLE SDF_TERRAFORM_ROLE;
 GRANT CREATE WAREHOUSE ON ACCOUNT TO ROLE SDF_TERRAFORM_ROLE;
 GRANT CREATE DATABASE ON ACCOUNT TO ROLE SDF_TERRAFORM_ROLE;
@@ -125,8 +126,18 @@ GRANT ROLE SDF_TERRAFORM_ROLE TO USER SDF_TERRAFORM_SVC;
 Finally, test your new service account by connecting to Snowflake via `snowsql` with the following command in your terminal window (replacing the `<>` placeholder values with your real values):
 
 ```bash
-snowsql -a <account_identifier> -u <user> --private-key-path <path>/snowflake_key.p8
+snowsql -a <account_identifier> -u SDF_TERRAFORM_SVC --private-key-path <path>/snowflake_key.p8
 ```
+
+### Azure
+To create the service principal, you'll need access to 
+https://docs.microsoft.com/en-us/azure/developer/terraform/authenticate-to-azure?tabs=bash
+https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret
+
+TOOD: How to limit access for service principal
+"The Contributor role is the default role and has full permissions to read and write to an Azure account. For this article, a service principal with a Contributor role is being used. For more information about Role-Based Access Control (RBAC) and roles, see RBAC: Built-in roles."
+
+
 
 ### Terraform
 Terraform depends on a state file to track the state of the resources/objects being managed. Many declarative style tools like this will do a real-time comparison between the objects defined in code and the deployed objects and then figure out what changes are required. But Terraform does not operate in this manner, instead it maintains a state file to keep track of things. See Terraform's overview of [State](https://www.terraform.io/docs/language/state/index.html) and in particular their discussion of why they chose to require a State file in [Purpose of Terraform State](https://www.terraform.io/docs/language/state/purpose.html).
@@ -149,7 +160,31 @@ terraform apply
 
 Since the `setup/azure-remote-storage.tf` script created a storage account with a random 5 character suffix you will need to lookup the storage account name in the [Azure Portal](https://portal.azure.com).
 
-**TODO** Determine the best method of authentication with Azure (Service Principal?)!
+## Development
+
+### Local Setup
+In order to run the framework locally during development, please follow these steps. First, set the following environment variables:
+
+```bash
+export ARM_CLIENT_ID="client-id"
+export ARM_CLIENT_SECRET="client-secret"
+export ARM_SUBSCRIPTION_ID="subscription-id"
+export ARM_TENANT_ID="tenant-id"
+
+export SNOWFLAKE_ACCOUNT="account"
+export SNOWFLAKE_REGION="region"
+export SNOWFLAKE_USER="user"
+export SNOWFLAKE_PRIVATE_KEY_PASSPHRASE="passphrase"
+export SNOWFLAKE_PRIVATE_KEY_PATH="path-to-file"
+```
+
+For development you can use the `SNOWFLAKE_PRIVATE_KEY_PATH` to store the path to your private key. When running in an automated way through your CI/CD pipeline you'll likely want to use the `SNOWFLAKE_PRIVATE_KEY` environment variable instead (and store the actual key value there).
+
+To login with the service account, you can use snowsql like this:
+
+```bash
+snowsql -a <account_identifier> -u SDF_TERRAFORM_SVC --private-key-path <path>/snowflake_key.p8
+```
 
 
 ## Todos
