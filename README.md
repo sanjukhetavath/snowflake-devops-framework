@@ -4,9 +4,28 @@
 
 1. [Overview](#overview)
     1. [SDLC Workflow](#sdlc-workflow)
-1. [Environments](#environments)
+1. [Workspaces](#workspaces)
     1. [Relationship to Snowflake Accounts](#relationship-to-snowflake-accounts)
-    1. [Creating Environments](#creating-environments)
+    1. [Creating Workspaces](#creating-workspaces)
+    1. [Seeding Workspaces](#seeding-workspaces)
+1. [Branching Strategy](#branching-strategy)
+1. [CI/CD](#ci-cd)
+    1. [Pipelines](#pipelines)
+    1. [Settings](#settings)
+1. [Scripts](#scripts)
+    1. [Scripts Overview](#scripts-overview)
+    1. [Chatops Bots](#chatops-bots)
+1. [Setup](#setup)
+    1. [Prerequisites](#prerequisites)
+    1. [Snowflake Setup](#snowflake-setup)
+    1. [Azure Setup](#azure-setup)
+    1. [Terraform Setup](#terraform-setup)
+1. [Development](#development)
+    1. [Local Setup](#local-setup)
+1. [Todos](#todos)
+1. [Maintainers](#maintainers)
+1. [Legal](#legal)
+
 
 
 ## Overview
@@ -15,9 +34,9 @@ The purpose of this framework is to provide you with a complete end-to-end DevOp
 **Please note** that this Snowflake DevOps Framework is a community-developed tool, not an official Snowflake offering. It comes with no support or warranty.
 
 ### SDLC Workflow
+**TODO:** Need a good breakdown and diagram here.
 
-
-## Workspace
+## Workspaces
 A workspace is the combination of two things: an identifier (component, business subject area, etc.) and an SDLC environment (dev, test, prod, etc.). This corresponds to how Terraform understands workspaces, see [One Workspace Per Environment Per Terraform Configuration](https://www.terraform.io/docs/cloud/guides/recommended-practices/part1.html#one-workspace-per-environment-per-terraform-configuration) for more details.
 
 ### Relationship to Snowflake Accounts
@@ -25,10 +44,9 @@ This framework is built around using a single Snowflake account for all environm
 
 TOOD: Add diagram
 
+### Creating Workspaces
 
-### Creating Environments
-
-### Seeding Environments
+### Seeding Workspaces
 
 
 ## Branching Strategy
@@ -90,7 +108,7 @@ This section will help you get things setup for the Framework.
     1. **Your favorite IDE with Git integration.** If you don’t already have a favorite IDE that integrates with Git I would recommend the great, free, open-source [Visual Studio Code](https://code.visualstudio.com/).
     1. **Your project repository cloned to your computer.** For connection details about your Git repository, open the Repository and copy the `HTTPS` link provided near the top of the page. If you have at least one file in your repository then click on the green `Code` icon near the top of the page and copy the `HTTPS` link. Use that link in VS Code or your favorite IDE to clone the repo to your computer.
 
-### Snowflake
+### Snowflake Setup
 For this Framework you will need to create a service account for Terraform with the appropriate permissions (named `SDF_TERRAFORM_SVC`). We will follow the principles of seperation of duties and least privilege here. The Terraform service account will also be configured to use [Key Pair Authentication](https://docs.snowflake.com/en/user-guide/key-pair-auth.html) with encrypted keys.
 
 Let's begin by creating a role in Snowflake for our Terraform service account along with the required permissions. To start, log in to your Snowflake account and run the following command as the `ACCOUNTADMIN` role:
@@ -116,7 +134,7 @@ openssl pkcs8 -topk8 -inform pem -in snowflake_key -outform PEM -v2 aes-256-cbc 
 
 Once completed, you will have an encrypted private key file named `snowflake_key.p8` in the PEM format and a public key file named `snowflake_key.pub`. Copy the public and private key files to a local directory for storage. Record the path to the files. Note that the private key is stored using the PKCS#8 (Public Key Cryptography Standards) format and is encrypted using the passphrase you specified in the previous step.
 
-Next, login to your Snowflake account and run the following command as the `ACCOUNTADMIN` role. Please replace the `<RSA PUBLIC KEY HERE>` placeholder with your public key (don't include the BEGIN and END comment lines but do included the newlines):
+Next, login to your Snowflake account and run the following command as the `ACCOUNTADMIN` role. Please replace the `<RSA PUBLIC KEY HERE>` placeholder with your public key (don't include the BEGIN and END comment lines but do included the newlines in the body of the public key):
 
 ```sql
 CREATE USER SDF_TERRAFORM_SVC RSA_PUBLIC_KEY='<RSA PUBLIC KEY HERE>' DEFAULT_ROLE=SDF_TERRAFORM_ROLE MUST_CHANGE_PASSWORD=FALSE;
@@ -129,20 +147,21 @@ Finally, test your new service account by connecting to Snowflake via `snowsql` 
 snowsql -a <account_identifier> -u SDF_TERRAFORM_SVC --private-key-path <path>/snowflake_key.p8
 ```
 
-### Azure
-To create the service principal, you'll need access to 
-https://docs.microsoft.com/en-us/azure/developer/terraform/authenticate-to-azure?tabs=bash
-https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret
+### Azure Setup
+Terraform will use Azure storage as a backend to store the Terraform state files (more details below in [Terraform Setup](#terraform-setup)). In order to allow Terraform to connect while running in an automated CI/CD pipeline we'll use an Azure service principal to connect. Please follow these steps to create the service principal:
 
-TOOD: How to limit access for service principal
-"The Contributor role is the default role and has full permissions to read and write to an Azure account. For this article, a service principal with a Contributor role is being used. For more information about Role-Based Access Control (RBAC) and roles, see RBAC: Built-in roles."
+* [Authenticate Terraform to Azure](https://docs.microsoft.com/en-us/azure/developer/terraform/authenticate-to-azure?tabs=bash). Follow the steps unde [Create a service principal](https://docs.microsoft.com/en-us/azure/developer/terraform/authenticate-to-azure?tabs=bash#create-a-service-principal)
 
+For more details, please also see Terraform's azurerm [Azure Provider: Authenticating using a Service Principal with a Client Secret](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret).
 
+Please note that according to Microsoft's [documentation](https://docs.microsoft.com/en-us/azure/developer/terraform/authenticate-to-azure?tabs=bash) above, "the Contributor role is the default role and has full permissions to read and write to an Azure account. For this article, a service principal with a Contributor role is being used. For more information about Role-Based Access Control (RBAC) and roles, see RBAC: Built-in roles."
 
-### Terraform
+**TODO:** How to limit access for service principal?
+
+### Terraform Setup
 Terraform depends on a state file to track the state of the resources/objects being managed. Many declarative style tools like this will do a real-time comparison between the objects defined in code and the deployed objects and then figure out what changes are required. But Terraform does not operate in this manner, instead it maintains a state file to keep track of things. See Terraform's overview of [State](https://www.terraform.io/docs/language/state/index.html) and in particular their discussion of why they chose to require a State file in [Purpose of Terraform State](https://www.terraform.io/docs/language/state/purpose.html).
 
-State files in Terraform introduce a few challenges, the most significant is that the State file can get out of sync with the actual deployed objects. This will happen if you use a different process/tool than Terraform to update any deployed object (including making manual changes to a deployed object). The State file can also get out of sync (or corrupted) when multiple developers/process are trying to access it at the same time. The way to safeguard against that is to use Terraform's [Remote State](https://www.terraform.io/docs/language/state/remote.html) capability to store the state files in a remote backend. To see a list of which backends are supported check out Terraform's [Backends](https://www.terraform.io/docs/language/settings/backends/index.html) page (and the "Standard Backends" in the left navigation of that page). For this framework we will be using the Azure backend `azurerm`. The steps below will walk you through setting this up, but please also see these pages for more details:
+State files in Terraform introduce a few challenges, the most significant is that the State file can get out of sync with the actual deployed objects. This will happen if you use a different process/tool than Terraform to update any deployed object (including making manual changes to a deployed object). The State file can also get out of sync (or corrupted) when multiple developers/process are trying to access it at the same time. The way to safeguard against those challenges is to always use the same process (Terraform) to manage the same set of objects and to use Terraform's [Remote State](https://www.terraform.io/docs/language/state/remote.html) capability to store the state files in a remote backend. To see a list of which backends are supported check out Terraform's [Backends](https://www.terraform.io/docs/language/settings/backends/index.html) page (and the "Standard Backends" in the left navigation of that page). For this framework we will be using the Azure backend `azurerm`. The steps below will walk you through setting this up, but please also see these pages for more details:
 
 * [Terraform's azurerm Backend](https://www.terraform.io/docs/language/settings/backends/azurerm.html)
 * [Microsoft's Store Terraform state in Azure Storage](https://docs.microsoft.com/en-us/azure/developer/terraform/store-state-in-azure-storage?tabs=azure-cli)
@@ -156,7 +175,7 @@ terraform init
 terraform apply
 ```
 
-**TODO** Incorporate best practices for locking down these new Azure resources (storage account)
+**TODO:** Incorporate best practices for locking down these new Azure resources (storage account)
 
 Since the `setup/azure-remote-storage.tf` script created a storage account with a random 5 character suffix you will need to lookup the storage account name in the [Azure Portal](https://portal.azure.com).
 

@@ -23,6 +23,9 @@ resource "snowflake_role" "workspace_reader_role" {
 }
 
 # Grants
+# NOTE: There is currently no supported way in the CZI provider to change the
+# OWNERSHIP of the new roles. So they will be owned by SDF_TERRAFORM_ROLE.
+
 resource "snowflake_role_grants" "sysadmin_grants" {
   role_name = snowflake_role.workspace_admin_role.name
 
